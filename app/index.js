@@ -21,9 +21,7 @@ export default class InfiniteScroll extends Component {
     this.maxPullDownDistance = 0;
 
     this.onScrollListener = this.onScrollListener.bind(this);
-    this.throttledOnScrollListener = throttle(this.onScrollListener, 150).bind(
-      this
-    );
+    this.throttledOnScrollListener = throttle(this.onScrollListener, 150, this)
     this.onStart = this.onStart.bind(this);
     this.onMove = this.onMove.bind(this);
     this.onEnd = this.onEnd.bind(this);
@@ -68,6 +66,10 @@ export default class InfiniteScroll extends Component {
   }
 
   componentWillUnmount() {
+    this.throttledOnScrollListener.cancel()
+    this.clearOnEndRAF()
+    this.clearOnScrollTimeout()
+    
     this.el.removeEventListener("scroll", this.throttledOnScrollListener);
 
     if (this.props.pullDownToRefresh) {
@@ -138,6 +140,13 @@ export default class InfiniteScroll extends Component {
     this._infScroll.style.transform = `translate3d(0px, ${this.currentY -
       this.startY}px, 0px)`;
   }
+  
+  clearOnEndRAF() {
+    if (this.onEndRAF) {
+      cancelAnimationFrame(this.onEndRAF)
+      this.onEndRAF = null
+    }
+  }
 
   onEnd(evt) {
     this.startY = 0;
@@ -149,7 +158,9 @@ export default class InfiniteScroll extends Component {
       this.props.refreshFunction && this.props.refreshFunction();
     }
 
-    requestAnimationFrame(() => {
+    this.clearOnEndRAF()
+    
+    this.onEndRAF = requestAnimationFrame(() => {
       // this._infScroll
       if (this._infScroll) {
           this._infScroll.style.overflow = "auto";
@@ -178,11 +189,19 @@ export default class InfiniteScroll extends Component {
     );
   }
 
+  clearOnScrollTimeout() {
+    if (this.onScrollTimeout) {
+      clearTimeout(this.onScrollTimeout)
+      this.onScrollTimeout = null
+    }
+  }
+  
   onScrollListener(event) {
     if (typeof this.props.onScroll === "function") {
       // Execute this callback in next tick so that it does not affect the
       // functionality of the library.
-      setTimeout(() => this.props.onScroll(event), 0);
+      this.clearOnScrollTimeout()
+      this.onScrollTimeout = setTimeout(() => this.props.onScroll(event), 0);
     }
 
     let target =

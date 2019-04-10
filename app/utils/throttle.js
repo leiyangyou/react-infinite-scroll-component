@@ -3,14 +3,14 @@ export default function throttle(fn, threshhold, scope) {
   threshhold || (threshhold = 250);
   var last,
       deferTimer;
-  return function () {
+  const throttled = function () {
     var context = scope || this;
 
     var now = +new Date,
         args = arguments;
     if (last && now < last + threshhold) {
       // hold on to it
-      clearTimeout(deferTimer);
+      throttled.cancel()
       deferTimer = setTimeout(function () {
         last = now;
         fn.apply(context, args);
@@ -20,4 +20,13 @@ export default function throttle(fn, threshhold, scope) {
       fn.apply(context, args);
     }
   };
+  
+  throttled.cancel = function () {
+    if (deferTimer) {
+      clearTimeout(deferTimer)
+      deferTimer = null
+    }
+  }
+  
+  return throttled
 }
